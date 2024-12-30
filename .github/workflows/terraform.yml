@@ -40,7 +40,7 @@ jobs:
       - name: Ensure S3 Backend Exists
         run: |
           BUCKET_NAME="terraform-state-bucket-devair"
-          REGION="us-east-1"
+          REGION="us-east-2"
           if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
             echo "Bucket does not exist. Creating..."
             aws s3api create-bucket --bucket "$BUCKET_NAME" --region "$REGION" \
@@ -58,7 +58,7 @@ jobs:
           terraform init \
             -backend-config="bucket=terraform-state-bucket-devair" \
             -backend-config="key=terraform.tfstate" \
-            -backend-config="region=us-east-1"
+            -backend-config="region=us-east-2"
 
       - name: Terraform Plan
         run: terraform plan
