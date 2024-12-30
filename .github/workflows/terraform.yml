@@ -18,12 +18,25 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
+          aws-region: us-east-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.6
+
+      - name: Read configuration
+        id: read-config
+        run: |
+          CONFIG_FILE="terraform-config.yml"
+          if [ -f "$CONFIG_FILE" ]; then
+            echo "Reading configuration file..."
+            DESTROY=$(cat $CONFIG_FILE | grep 'destroy:' | awk '{print $2}')
+          else
+            echo "No configuration file found. Using defaults."
+            DESTROY=false
+          fi
+          echo "destroy=$DESTROY" >> $GITHUB_ENV
 
       - name: Terraform Init
         run: terraform init
@@ -32,4 +45,9 @@ jobs:
         run: terraform plan
 
       - name: Terraform Apply
+        if: env.destroy != 'true'
         run: terraform apply -auto-approve
+
+      - name: Terraform Destroy
+        if: env.destroy == 'true'
+        run: terraform destroy -auto-approve
