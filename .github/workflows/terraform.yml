@@ -27,7 +27,7 @@ jobs:
 
       - name: Ensure S3 Backend Exists
         run: |
-          BUCKET_NAME="my-terraform-state-bucket"
+          BUCKET_NAME="terraform-state-bucket"
           REGION="us-east-1"
 
           if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
@@ -43,7 +43,7 @@ jobs:
 
       - name: Terraform Init with Remote State
         run: |
-          terraform init -backend-config="bucket=my-terraform-state-bucket" \
+          terraform init -backend-config="bucket=terraform-state-bucket" \
                         -backend-config="key=terraform.tfstate" \
                         -backend-config="region=us-east-1"
 
