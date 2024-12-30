@@ -18,36 +18,42 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: us-east-2
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.6
 
-      - name: Read configuration
-        id: read-config
+      - name: Ensure S3 Backend Exists
         run: |
-          CONFIG_FILE="terraform-config.yml"
-          if [ -f "$CONFIG_FILE" ]; then
-            echo "Reading configuration file..."
-            DESTROY=$(cat $CONFIG_FILE | grep 'destroy:' | awk '{print $2}')
-          else
-            echo "No configuration file found. Using defaults."
-            DESTROY=false
-          fi
-          echo "destroy=$DESTROY" >> $GITHUB_ENV
+          BUCKET_NAME="my-terraform-state-bucket"
+          REGION="us-east-1"
 
-      - name: Terraform Init
-        run: terraform init
+          if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "Bucket does not exist. Creating..."
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region "$REGION" --create-bucket-configuration LocationConstraint="$REGION"
+            echo "Bucket created: $BUCKET_NAME"
+          else
+            echo "Bucket already exists: $BUCKET_NAME"
+          fi
+
+          # Enable versioning for the bucket
+          aws s3api put-bucket-versioning --bucket "$BUCKET_NAME" --versioning-configuration Status=Enabled
+
+      - name: Terraform Init with Remote State
+        run: |
+          terraform init -backend-config="bucket=my-terraform-state-bucket" \
+                        -backend-config="key=terraform.tfstate" \
+                        -backend-config="region=us-east-1"
 
       - name: Terraform Plan
         run: terraform plan
 
       - name: Terraform Apply
-        if: env.destroy != 'true'
+        if: github.event.inputs.destroy != 'true'
         run: terraform apply -auto-approve
 
       - name: Terraform Destroy
-        if: env.destroy == 'true'
+        if: github.event.inputs.destroy == 'true'
         run: terraform destroy -auto-approve
