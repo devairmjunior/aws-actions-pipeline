@@ -35,7 +35,7 @@ resource "aws_glue_job" "glue_job" {
 }
 
 resource "aws_s3_bucket" "script_bucket" {
-  bucket = "my-glue-scripts-bucket"
+  bucket = "glue-scripts-bucket-devair"
 }
 
 resource "aws_s3_bucket_object" "script_object" {
