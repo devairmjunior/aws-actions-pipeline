@@ -37,9 +37,9 @@ resource "aws_iam_role_policy_attachment" "lambda_logs_attach" {
 resource "aws_lambda_function" "whatsapp_echo" {
   function_name    = "cloudEcho"
   role             = aws_iam_role.lambda_role.arn
-  runtime          = "nodejs16.x"
-  handler          = "index.handler"
-  filename         = "lambda/function.zip"
+  runtime          = "python3.9" # Alterado para o runtime Python
+  handler          = "app.lambda_handler" # Nome do arquivo e função Python
+  filename         = "lambda/function.zip" # O arquivo compactado com o código
   source_code_hash = filebase64sha256("lambda/function.zip")
 
   # Variáveis de ambiente
