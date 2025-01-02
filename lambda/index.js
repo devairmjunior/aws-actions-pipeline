@@ -5,6 +5,8 @@ exports.handler = async (event) => {
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
   const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 
+  console.log("Event received:", JSON.stringify(event, null, 2));
+
   if (!VERIFY_TOKEN || !WHATSAPP_TOKEN) {
     console.error("Tokens não configurados nas variáveis de ambiente.");
     return {
@@ -18,6 +20,7 @@ exports.handler = async (event) => {
   try {
     if (event?.requestContext?.http?.method === "GET") {
       // Verificação do webhook
+      console.log("Webhook verification request received.");
       let queryParams = event?.queryStringParameters;
       if (queryParams != null) {
         const mode = queryParams["hub.mode"];
@@ -52,6 +55,9 @@ exports.handler = async (event) => {
         };
       }
     } else if (event?.requestContext?.http?.method === "POST") {
+      // Processamento de mensagens
+      console.log("Message processing request received.");
+      console.log("Message body:", JSON.stringify(event.body, null, 2));
       // Processando mensagens recebidas
       let body = JSON.parse(event.body);
       let entries = body.entry;
@@ -88,10 +94,10 @@ exports.handler = async (event) => {
       };
     }
   } catch (error) {
-    console.error("Erro ao processar a requisição:", error);
-    response = {
+    console.error("Error processing request:", error);
+    return {
       statusCode: 500,
-      body: "Internal server error",
+      body: "Internal Server Error",
     };
   }
 
