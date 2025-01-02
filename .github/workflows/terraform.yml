@@ -65,8 +65,7 @@ jobs:
           VERIFY_TOKEN: ${{ secrets.VERIFY_TOKEN }}
         run: terraform plan \
           -var="whatsapp_token=${{ secrets.WHATSAPP_TOKEN }}" \
-          -var="verify_token=${{ secrets.VERIFY_TOKEN }}" \
-          .
+          -var="verify_token=${{ secrets.VERIFY_TOKEN }}"
 
       - name: Terraform Apply
         if: ${{ env.DESTROY != 'true' }}
@@ -75,8 +74,7 @@ jobs:
           VERIFY_TOKEN: ${{ secrets.VERIFY_TOKEN }}
         run: terraform apply -auto-approve \
           -var="whatsapp_token=${{ secrets.WHATSAPP_TOKEN }}" \
-          -var="verify_token=${{ secrets.VERIFY_TOKEN }}" \
-          .
+          -var="verify_token=${{ secrets.VERIFY_TOKEN }}"
 
       - name: Terraform Destroy
         if: ${{ env.DESTROY == 'true' }}
@@ -85,5 +83,4 @@ jobs:
           VERIFY_TOKEN: ${{ secrets.VERIFY_TOKEN }}
         run: terraform destroy -auto-approve \
           -var="whatsapp_token=${{ secrets.WHATSAPP_TOKEN }}" \
-          -var="verify_token=${{ secrets.VERIFY_TOKEN }}" \
-          .
+          -var="verify_token=${{ secrets.VERIFY_TOKEN }}"
