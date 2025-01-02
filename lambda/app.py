@@ -203,7 +203,7 @@ def send_whatsapp_reply(phone_number_id, whatsapp_token, to, reply_message):
         response_data = response.read().decode("utf-8")
         print("Resposta do WhatsApp API:", response_data)
 
-        # Check for token expiration error
+        # Verifica erro de token expirado
         response_json = json.loads(response_data)
         if "error" in response_json:
             if response_json["error"]["code"] == 190:
