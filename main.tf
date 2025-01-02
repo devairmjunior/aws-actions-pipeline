@@ -37,12 +37,12 @@ resource "aws_iam_role_policy_attachment" "lambda_logs_attach" {
 }
 
 ################################################################################
-# Lambda Layer para dependências Python (drive-api)
+# Lambda Layer para dependências Python (libs)
 ################################################################################
 resource "aws_lambda_layer_version" "drive_api_layer" {
   # Ajuste o caminho do ZIP conforme onde você salvou o arquivo
-  filename             = "${path.module}/lambda/drive-api.zip"
-  layer_name           = "drive-api"
+  filename             = "${path.module}/lambda/libs.zip"
+  layer_name           = "libs"
   description          = "Camada com google-api-python-client e dependências"
   compatible_runtimes  = ["python3.9"]
   compatible_architectures = ["x86_64"]    # Se quiser suportar arm64 também, inclua aqui
