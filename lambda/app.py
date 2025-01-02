@@ -189,21 +189,26 @@ def send_whatsapp_reply(phone_number_id, whatsapp_token, to, reply_message):
     }
     data = json.dumps(payload)
 
-    path = f"/v13.0/{phone_number_id}/messages"
-    query = f"access_token={urllib.parse.quote(whatsapp_token)}"
-    full_path = f"{path}?{query}"
-
-    # Configura o cliente HTTP
-    conn = http.client.HTTPSConnection("graph.facebook.com")
+    path = f"/v21.0/{phone_number_id}/messages"
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {whatsapp_token}"
     }
 
+    conn = http.client.HTTPSConnection("graph.facebook.com")
+
     try:
-        conn.request("POST", full_path, body=data, headers=headers)
+        conn.request("POST", path, body=data, headers=headers)
         response = conn.getresponse()
         response_data = response.read().decode("utf-8")
         print("Resposta do WhatsApp API:", response_data)
+
+        # Check for token expiration error
+        response_json = json.loads(response_data)
+        if "error" in response_json:
+            if response_json["error"]["code"] == 190:
+                print("Erro: Token expirado. Renove o token e tente novamente.")
+
     except Exception as e:
         print("Erro ao enviar resposta ao WhatsApp:", e)
     finally:
