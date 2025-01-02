@@ -1,14 +1,14 @@
 variable "whatsapp_token" {
-  description = "Token do WhatsApp"
+  description = "Token do WhatsApp para autenticação"
   type        = string
 }
 
 variable "verify_token" {
-  description = "Token de verificação do webhook"
+  description = "Token de verificação para WhatsApp"
   type        = string
 }
 
 variable "gemini_api_key" {
-  description = "Token de API do Gemini"
+  description = "Chave da API do Gemini"
   type        = string
 }

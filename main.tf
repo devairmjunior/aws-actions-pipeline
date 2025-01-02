@@ -35,10 +35,10 @@ resource "aws_iam_role_policy_attachment" "lambda_logs_attach" {
 
 # Lambda Layer para dependências
 resource "aws_lambda_layer_version" "dependencies_layer" {
-  filename         = "lambda/layer.zip" # Caminho do arquivo zipado com dependências
-  layer_name       = "python-dependencies"
+  filename            = "${path.module}/lambda/layer.zip" # Caminho do arquivo layer.zip
+  layer_name          = "python-dependencies"
   compatible_runtimes = ["python3.9"]
-  description      = "Lambda Layer com dependências Python"
+  description         = "Lambda Layer com dependências Python"
 }
 
 # Função Lambda
@@ -47,8 +47,8 @@ resource "aws_lambda_function" "whatsapp_echo" {
   role             = aws_iam_role.lambda_role.arn
   runtime          = "python3.9"
   handler          = "app.lambda_handler"
-  filename         = "lambda/function.zip" # O arquivo zipado com o código principal
-  source_code_hash = filebase64sha256("lambda/function.zip")
+  filename         = "${path.module}/lambda/lambda_function.zip" # Caminho do arquivo lambda_function.zip
+  source_code_hash = filebase64sha256("${path.module}/lambda/lambda_function.zip")
 
   # Associando a camada criada
   layers = [aws_lambda_layer_version.dependencies_layer.arn]
