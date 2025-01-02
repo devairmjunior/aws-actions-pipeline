@@ -13,9 +13,23 @@ provider "aws" {
 }
 
 ################################################################################
+# S3 Bucket para o código da Lambda
+################################################################################
+resource "aws_s3_bucket" "lambda_code_bucket" {
+  bucket        = "lambda-code-whatsapp-echo"
+  force_destroy = true # Cuidado ao usar em produção; remove todos os objetos ao destruir o bucket
+}
+
+resource "aws_s3_object" "lambda_function_zip" {
+  bucket       = aws_s3_bucket.lambda_code_bucket.id
+  key          = "lambda_function.zip"
+  source       = "${path.module}/lambda/lambda_function.zip"
+  content_type = "application/zip"
+}
+
+################################################################################
 # IAM Role para a Lambda
 ################################################################################
-
 data "aws_iam_policy_document" "lambda_trust" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -40,12 +54,11 @@ resource "aws_iam_role_policy_attachment" "lambda_logs_attach" {
 # Lambda Layer para dependências Python (libs)
 ################################################################################
 resource "aws_lambda_layer_version" "drive_api_layer" {
-  # Ajuste o caminho do ZIP conforme onde você salvou o arquivo
-  filename             = "${path.module}/lambda/libs.zip"
-  layer_name           = "libs"
-  description          = "Camada com google-api-python-client e dependências"
-  compatible_runtimes  = ["python3.9"]
-  compatible_architectures = ["x86_64"]    # Se quiser suportar arm64 também, inclua aqui
+  filename                = "${path.module}/lambda/libs.zip"
+  layer_name              = "libs"
+  description             = "Camada com google-api-python-client e dependências"
+  compatible_runtimes     = ["python3.9"]
+  compatible_architectures = ["x86_64"]
 }
 
 ################################################################################
@@ -56,8 +69,10 @@ resource "aws_lambda_function" "whatsapp_echo" {
   role             = aws_iam_role.lambda_role.arn
   runtime          = "python3.9"
   handler          = "app.lambda_handler"
-  filename         = "${path.module}/lambda/lambda_function.zip" 
-  source_code_hash = filebase64sha256("${path.module}/lambda/lambda_function.zip")
+
+  # Usando o bucket S3 como fonte do código
+  s3_bucket        = aws_s3_bucket.lambda_code_bucket.id
+  s3_key           = aws_s3_object.lambda_function_zip.key
 
   # Referência à camada criada acima
   layers = [
