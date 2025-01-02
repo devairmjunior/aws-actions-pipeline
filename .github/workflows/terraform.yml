@@ -39,13 +39,31 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
 
-      # 4. Baixar e configurar Terraform
+      # 4. Instalar dependências Python e empacotar o Lambda Layer
+      - name: Install dependencies and package Lambda Layer
+        run: |
+          set -eux
+          cd lambda
+          mkdir -p build/python
+          pip install -r requirements.txt --target build/python
+          cd build
+          zip -r ../layer.zip .
+          cd ..
+
+      # 5. Empacotar o código da função Lambda
+      - name: Package Lambda Function
+        run: |
+          set -eux
+          cd lambda
+          zip lambda_function.zip app.py
+
+      # 6. Baixar e configurar Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.6
 
-      # 5. Garantir que o S3 Backend existe
+      # 7. Garantir que o S3 Backend existe
       - name: Ensure S3 Backend Exists
         run: |
           set -eux
@@ -62,7 +80,7 @@ jobs:
           aws s3api put-bucket-versioning --bucket "$BUCKET_NAME" \
             --versioning-configuration Status=Enabled
 
-      # 6. Inicializar o Terraform apontando para o backend do S3
+      # 8. Inicializar o Terraform apontando para o backend do S3
       - name: Terraform Init with Remote State
         run: |
           set -eux
@@ -71,7 +89,7 @@ jobs:
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=us-east-2"
 
-      # 7. Criar um arquivo .auto.tfvars com as secrets (carregado automaticamente pelo Terraform)
+      # 9. Criar um arquivo .auto.tfvars com as secrets (carregado automaticamente pelo Terraform)
       - name: Create TFVars file
         run: |
           set -eux
@@ -79,20 +97,20 @@ jobs:
           echo "verify_token   = \"${{ secrets.VERIFY_TOKEN }}\"" >> secrets.auto.tfvars
           echo "gemini_api_key = \"${{ secrets.GEMINI_API_KEY }}\"" >> secrets.auto.tfvars
 
-      # 8. Terraform Plan
+      # 10. Terraform Plan
       - name: Terraform Plan
         run: |
           set -eux
           terraform plan
 
-      # 9. Terraform Apply (quando destroy != 'true')
+      # 11. Terraform Apply (quando destroy != 'true')
       - name: Terraform Apply
         if: ${{ env.DESTROY != 'true' }}
         run: |
           set -eux
           terraform apply -auto-approve
 
-      # 10. Terraform Destroy (quando destroy == 'true')
+      # 12. Terraform Destroy (quando destroy == 'true')
       - name: Terraform Destroy
         if: ${{ env.DESTROY == 'true' }}
         run: |
