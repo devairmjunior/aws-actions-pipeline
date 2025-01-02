@@ -8,7 +8,7 @@ def lambda_handler(event, context):
     # Ler variáveis de ambiente
     VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN")
     WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN")
-    
+
     # Só se quiser usar a Gemini:
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
@@ -80,7 +80,7 @@ def lambda_handler(event, context):
                     value = change.get("value", {})
                     phone_number_id = value.get("metadata", {}).get("phone_number_id", "")
                     messages = value.get("messages", [])
-                    
+
                     for msg in messages:
                         if msg.get("type") == "text":
                             from_number = msg.get("from")
@@ -129,7 +129,6 @@ def lambda_handler(event, context):
 
     return response
 
-
 def call_gemini_api(user_input):
     """
     Função que chama a Gemini API usando a biblioteca google.generativeai.
@@ -176,7 +175,6 @@ def call_gemini_api(user_input):
     except Exception as e:
         print("Erro ao chamar a Gemini API:", e)
         return "Erro ao chamar a Gemini API."
-
 
 def send_whatsapp_reply(phone_number_id, whatsapp_token, to, reply_message):
     """
