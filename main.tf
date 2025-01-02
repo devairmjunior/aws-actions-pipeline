@@ -57,7 +57,7 @@ resource "aws_lambda_layer_version" "drive_api_layer" {
   filename                = "${path.module}/lambda/libs.zip"
   layer_name              = "libs"
   description             = "Camada com google-api-python-client e dependências"
-  compatible_runtimes     = ["python3.9"]
+  compatible_runtimes     = ["python3.12"]
   compatible_architectures = ["x86_64"]
 }
 
@@ -67,7 +67,7 @@ resource "aws_lambda_layer_version" "drive_api_layer" {
 resource "aws_lambda_function" "whatsapp_echo" {
   function_name    = "cloudEcho"
   role             = aws_iam_role.lambda_role.arn
-  runtime          = "python3.9"
+  runtime          = "python3.12" # Alterado para Python 3.12
   handler          = "app.lambda_handler"
 
   # Usando o bucket S3 como fonte do código
