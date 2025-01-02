@@ -33,14 +33,25 @@ resource "aws_iam_role_policy_attachment" "lambda_logs_attach" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# Lambda Layer para dependências
+resource "aws_lambda_layer_version" "dependencies_layer" {
+  filename         = "lambda/layer.zip" # Caminho do arquivo zipado com dependências
+  layer_name       = "python-dependencies"
+  compatible_runtimes = ["python3.9"]
+  description      = "Lambda Layer com dependências Python"
+}
+
 # Função Lambda
 resource "aws_lambda_function" "whatsapp_echo" {
   function_name    = "cloudEcho"
   role             = aws_iam_role.lambda_role.arn
-  runtime          = "python3.9" # Alterado para o runtime Python
-  handler          = "app.lambda_handler" # Nome do arquivo e função Python
-  filename         = "lambda/function.zip" # O arquivo compactado com o código
+  runtime          = "python3.9"
+  handler          = "app.lambda_handler"
+  filename         = "lambda/function.zip" # O arquivo zipado com o código principal
   source_code_hash = filebase64sha256("lambda/function.zip")
+
+  # Associando a camada criada
+  layers = [aws_lambda_layer_version.dependencies_layer.arn]
 
   # Variáveis de ambiente
   environment {
@@ -62,20 +73,4 @@ resource "aws_lambda_function_url" "whatsapp_echo_url" {
 output "lambda_function_url" {
   description = "URL pública da Lambda"
   value       = aws_lambda_function_url.whatsapp_echo_url.function_url
-}
-
-# Variáveis do Terraform
-variable "whatsapp_token" {
-  description = "Token do WhatsApp"
-  type        = string
-}
-
-variable "verify_token" {
-  description = "Token de verificação do webhook"
-  type        = string
-}
-
-variable "gemini_api_key" {
-  description = "Token de API do Gemini"
-  type        = string
 }
