@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - feature/*
+      - 'feature/*'
 
 jobs:
   terraform:
@@ -19,11 +19,15 @@ jobs:
       - name: Parse terraform-config.yml
         id: parse_config
         run: |
-          if command -v yq &> /dev/null; then
-            DESTROY_VALUE=$(yq e '.destroy' terraform-config.yml)
-          else
-            DESTROY_VALUE=$(grep '^destroy:' terraform-config.yml | awk '{print $2}')
+          set -eux
+          # Instala yq se não existir
+          if ! command -v yq &> /dev/null; then
+            echo "Instalando yq..."
+            sudo wget https://github.com/mikefarah/yq/releases/download/v4.33.3/yq_linux_amd64 -O /usr/local/bin/yq
+            sudo chmod +x /usr/local/bin/yq
           fi
+          # Lê o campo 'destroy' (true/false) do arquivo
+          DESTROY_VALUE=$(yq e '.destroy' terraform-config.yml)
           echo "Valor lido de destroy: $DESTROY_VALUE"
           echo "DESTROY=$DESTROY_VALUE" >> $GITHUB_ENV
 
@@ -44,6 +48,7 @@ jobs:
       # 5. Garantir que o S3 Backend existe
       - name: Ensure S3 Backend Exists
         run: |
+          set -eux
           BUCKET_NAME="terraform-state-bucket-devair"
           REGION="us-east-2"
           if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
@@ -60,28 +65,36 @@ jobs:
       # 6. Inicializar o Terraform apontando para o backend do S3
       - name: Terraform Init with Remote State
         run: |
+          set -eux
           terraform init \
             -backend-config="bucket=terraform-state-bucket-devair" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=us-east-2"
 
-      # 7. Criar um arquivo .auto.tfvars com as secrets
-      #    (Será automaticamente carregado pelo Terraform)
+      # 7. Criar um arquivo .auto.tfvars com as secrets (carregado automaticamente pelo Terraform)
       - name: Create TFVars file
         run: |
+          set -eux
           echo "whatsapp_token = \"${{ secrets.WHATSAPP_TOKEN }}\"" > secrets.auto.tfvars
           echo "verify_token   = \"${{ secrets.VERIFY_TOKEN }}\"" >> secrets.auto.tfvars
+          echo "gemini_api_key = \"${{ secrets.GEMINI_API_KEY }}\"" >> secrets.auto.tfvars
 
       # 8. Terraform Plan
       - name: Terraform Plan
-        run: terraform plan
+        run: |
+          set -eux
+          terraform plan
 
       # 9. Terraform Apply (quando destroy != 'true')
       - name: Terraform Apply
         if: ${{ env.DESTROY != 'true' }}
-        run: terraform apply -auto-approve
+        run: |
+          set -eux
+          terraform apply -auto-approve
 
       # 10. Terraform Destroy (quando destroy == 'true')
       - name: Terraform Destroy
         if: ${{ env.DESTROY == 'true' }}
-        run: terraform destroy -auto-approve
+        run: |
+          set -eux
+          terraform destroy -auto-approve

@@ -35,11 +35,11 @@ resource "aws_iam_role_policy_attachment" "lambda_logs_attach" {
 
 # Função Lambda
 resource "aws_lambda_function" "whatsapp_echo" {
-  function_name = "cloudEcho"
-  role          = aws_iam_role.lambda_role.arn
-  runtime       = "nodejs16.x"
-  handler       = "index.handler"
-  filename      = "lambda/function.zip"
+  function_name    = "cloudEcho"
+  role             = aws_iam_role.lambda_role.arn
+  runtime          = "nodejs16.x"
+  handler          = "index.handler"
+  filename         = "lambda/function.zip"
   source_code_hash = filebase64sha256("lambda/function.zip")
 
   # Variáveis de ambiente
@@ -47,6 +47,7 @@ resource "aws_lambda_function" "whatsapp_echo" {
     variables = {
       WHATSAPP_TOKEN = var.whatsapp_token
       VERIFY_TOKEN   = var.verify_token
+      GEMINI_API_KEY = var.gemini_api_key
     }
   }
 }
@@ -71,5 +72,10 @@ variable "whatsapp_token" {
 
 variable "verify_token" {
   description = "Token de verificação do webhook"
+  type        = string
+}
+
+variable "gemini_api_key" {
+  description = "Token de API do Gemini"
   type        = string
 }
