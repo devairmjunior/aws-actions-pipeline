@@ -11,27 +11,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout do repositório
+      # 1. Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Ler a flag de destroy do terraform-config.yml
+      # 2. Parse terraform-config.yml for destroy flag
       - name: Parse terraform-config.yml
         id: parse_config
         run: |
           set -eux
-          # Instala yq se não existir
+          # Install yq if not present
           if ! command -v yq &> /dev/null; then
-            echo "Instalando yq..."
+            echo "Installing yq..."
             sudo wget https://github.com/mikefarah/yq/releases/download/v4.33.3/yq_linux_amd64 -O /usr/local/bin/yq
             sudo chmod +x /usr/local/bin/yq
           fi
-          # Lê o campo 'destroy' (true/false) do arquivo
           DESTROY_VALUE=$(yq e '.destroy' terraform-config.yml)
-          echo "Valor lido de destroy: $DESTROY_VALUE"
+          echo "Destroy value: $DESTROY_VALUE"
           echo "DESTROY=$DESTROY_VALUE" >> $GITHUB_ENV
 
-      # 3. Configurar as credenciais AWS
+      # 3. Configure AWS Credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -39,7 +38,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
 
-      # 4. Instalar dependências Python e empacotar o Lambda Layer
+      # 4. Install dependencies and package Lambda Layer
       - name: Install dependencies and package Lambda Layer
         run: |
           set -eux
@@ -50,38 +49,30 @@ jobs:
           zip -r ../layer.zip .
           cd ..
 
-      # 5. Empacotar o código da função Lambda
-      - name: Package Lambda Function
-        run: |
-          set -eux
-          cd lambda
-          zip lambda_function.zip app.py
-
-      # 6. Baixar e configurar Terraform
+      # 5. Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.6
 
-      # 7. Garantir que o S3 Backend existe
+      # 6. Ensure S3 backend exists
       - name: Ensure S3 Backend Exists
         run: |
           set -eux
           BUCKET_NAME="terraform-state-bucket-devair"
           REGION="us-east-2"
           if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
-            echo "Bucket does not exist. Creating..."
+            echo "Creating bucket: $BUCKET_NAME"
             aws s3api create-bucket --bucket "$BUCKET_NAME" --region "$REGION" \
               --create-bucket-configuration LocationConstraint="$REGION"
-            echo "Bucket created: $BUCKET_NAME"
           else
             echo "Bucket already exists: $BUCKET_NAME"
           fi
           aws s3api put-bucket-versioning --bucket "$BUCKET_NAME" \
             --versioning-configuration Status=Enabled
 
-      # 8. Inicializar o Terraform apontando para o backend do S3
-      - name: Terraform Init with Remote State
+      # 7. Terraform Init with S3 remote backend
+      - name: Terraform Init
         run: |
           set -eux
           terraform init \
@@ -89,7 +80,7 @@ jobs:
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=us-east-2"
 
-      # 9. Criar um arquivo .auto.tfvars com as secrets (carregado automaticamente pelo Terraform)
+      # 8. Create TFVars file with secrets
       - name: Create TFVars file
         run: |
           set -eux
@@ -97,20 +88,20 @@ jobs:
           echo "verify_token   = \"${{ secrets.VERIFY_TOKEN }}\"" >> secrets.auto.tfvars
           echo "gemini_api_key = \"${{ secrets.GEMINI_API_KEY }}\"" >> secrets.auto.tfvars
 
-      # 10. Terraform Plan
+      # 9. Terraform Plan
       - name: Terraform Plan
         run: |
           set -eux
           terraform plan
 
-      # 11. Terraform Apply (quando destroy != 'true')
+      # 10. Terraform Apply (when destroy != 'true')
       - name: Terraform Apply
         if: ${{ env.DESTROY != 'true' }}
         run: |
           set -eux
           terraform apply -auto-approve
 
-      # 12. Terraform Destroy (quando destroy == 'true')
+      # 11. Terraform Destroy (when destroy == 'true')
       - name: Terraform Destroy
         if: ${{ env.DESTROY == 'true' }}
         run: |

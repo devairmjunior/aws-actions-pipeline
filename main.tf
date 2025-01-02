@@ -12,11 +12,9 @@ provider "aws" {
   region = "us-east-2"
 }
 
-# Role para a Lambda
-resource "aws_iam_role" "lambda_role" {
-  name               = "lambda_role_whatsapp_echo"
-  assume_role_policy = data.aws_iam_policy_document.lambda_trust.json
-}
+################################################################################
+# IAM Role para a Lambda
+################################################################################
 
 data "aws_iam_policy_document" "lambda_trust" {
   statement {
@@ -28,30 +26,47 @@ data "aws_iam_policy_document" "lambda_trust" {
   }
 }
 
+resource "aws_iam_role" "lambda_role" {
+  name               = "lambda_role_whatsapp_echo"
+  assume_role_policy = data.aws_iam_policy_document.lambda_trust.json
+}
+
 resource "aws_iam_role_policy_attachment" "lambda_logs_attach" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Lambda Layer para dependências
-resource "aws_lambda_layer_version" "dependencies_layer" {
-  filename            = "${path.module}/lambda/layer.zip" # Caminho do arquivo layer.zip
-  layer_name          = "python-dependencies"
-  compatible_runtimes = ["python3.9"]
-  description         = "Lambda Layer com dependências Python"
+################################################################################
+# Lambda Layer para dependências Python (drive-api)
+################################################################################
+resource "aws_lambda_layer_version" "drive_api_layer" {
+  # Ajuste o caminho do ZIP conforme onde você salvou o arquivo
+  filename             = "${path.module}/lambda/drive-api.zip"
+  layer_name           = "drive-api"
+  description          = "Camada com google-api-python-client e dependências"
+  compatible_runtimes  = ["python3.9"]
+  compatible_architectures = ["x86_64"]    # Se quiser suportar arm64 também, inclua aqui
 }
 
-# Função Lambda
+################################################################################
+# Função Lambda principal
+################################################################################
 resource "aws_lambda_function" "whatsapp_echo" {
   function_name    = "cloudEcho"
   role             = aws_iam_role.lambda_role.arn
   runtime          = "python3.9"
   handler          = "app.lambda_handler"
-  filename         = "${path.module}/lambda/lambda_function.zip" # Caminho do arquivo lambda_function.zip
+  filename         = "${path.module}/lambda/lambda_function.zip" 
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda_function.zip")
 
-  # Associando a camada criada
-  layers = [aws_lambda_layer_version.dependencies_layer.arn]
+  # Referência à camada criada acima
+  layers = [
+    aws_lambda_layer_version.drive_api_layer.arn
+  ]
+
+  # Configurações de timeout e memória
+  timeout     = 15
+  memory_size = 256
 
   # Variáveis de ambiente
   environment {
@@ -63,14 +78,18 @@ resource "aws_lambda_function" "whatsapp_echo" {
   }
 }
 
-# Function URL
+################################################################################
+# Lambda Function URL (para expor uma URL pública, se desejado)
+################################################################################
 resource "aws_lambda_function_url" "whatsapp_echo_url" {
   function_name      = aws_lambda_function.whatsapp_echo.arn
   authorization_type = "NONE"
 }
 
-# Output da URL da Lambda
+################################################################################
+# Output da Function URL
+################################################################################
 output "lambda_function_url" {
-  description = "URL pública da Lambda"
+  description = "Public URL for the Lambda Function"
   value       = aws_lambda_function_url.whatsapp_echo_url.function_url
 }
