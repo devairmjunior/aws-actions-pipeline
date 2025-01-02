@@ -1,6 +1,1 @@
-<<<<<<< HEAD
 google-generativeai
-=======
-google-generativeai
-
->>>>>>> temp-saved-commits
